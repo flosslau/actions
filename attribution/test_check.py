@@ -1,6 +1,6 @@
 # Copyright 2026 Bruno Venceslau
 # SPDX-License-Identifier: Apache-2.0
-"""Tests of check.py. Run: python3 -m unittest discover -s actions/attribution
+"""Tests of check.py. Run: make check, or python3 -m unittest discover -s attribution
 
 Every commit these tests judge is made in a throwaway repository; nothing is
 pushed anywhere.
@@ -869,11 +869,11 @@ class Fetch(Case):
         worst = attempts * check.FETCH_TIMEOUT_SECONDS + sum(check.FETCH_BACKOFF_SECONDS)
         self.assertEqual(attempts, 3)
         self.assertLess(worst, check.JOB_TIMEOUT_MINUTES * 60)
-        root = Path(check.__file__).resolve().parents[2]
+        action = Path(check.__file__).resolve().parent
         line = f"timeout-minutes: {check.JOB_TIMEOUT_MINUTES}"
-        for path in ("README.md", ".github/workflows/attribution.yml"):
-            with self.subTest(path=path):
-                text = (root / path).read_text(encoding="utf-8")
+        for path in (action / "README.md", action.parent / ".github/workflows/attribution.yml"):
+            with self.subTest(path=path.name):
+                text = path.read_text(encoding="utf-8")
                 job = text[text.index("  attribution:\n"):text.index("    steps:\n")]
                 self.assertIn(line, job)
 
@@ -1157,10 +1157,24 @@ class RulesFile(unittest.TestCase):
         self.assertEqual(check.agent_of_email(rules, "1+some[bot]@users.noreply.github.com"), "X")
 
     def test_readme_gives_the_commands_the_check_prints(self):
-        readme = (Path(check.__file__).resolve().parents[2] / "README.md").read_text()
+        readme = (Path(check.__file__).resolve().parent / "README.md").read_text()
         for command in ("git commit --amend --reset-author", "git push --force-with-lease"):
             self.assertIn(command, check.HOW_TO_FIX)
             self.assertIn(command, readme)
+
+    def test_this_repository_runs_the_action_from_its_own_directory(self):
+        # A wrong path in the workflow would show only on a pull request.
+        action = Path(check.__file__).resolve().parent
+        workflow = action.parent / ".github/workflows/attribution.yml"
+        self.assertTrue((action / "action.yml").is_file())
+        self.assertIn(f"      - uses: ./{action.name}\n", workflow.read_text(encoding="utf-8"))
+
+    def test_readme_and_the_printed_link_name_the_action_by_its_directory(self):
+        action = Path(check.__file__).resolve().parent
+        readme = (action / "README.md").read_text(encoding="utf-8")
+        self.assertIn(f"      - uses: flosslau/actions/{action.name}@<commit SHA>\n", readme)
+        link = f"https://github.com/flosslau/actions/tree/main/{action.name}"
+        self.assertTrue(check.HOW_TO_FIX.endswith(f"The rule and its list: {link}"), check.HOW_TO_FIX)
 
     def test_e_mail_is_stripped_before_it_is_compared(self):
         self.assertEqual(check.agent_of_email(RULES, " NoReply@Anthropic.com \t"), "Claude Code")

@@ -31,7 +31,9 @@ jobs:
     # the whole job.
     timeout-minutes: 10
     steps:
+      # A repository that calls the action needs no checkout. This job does:
+      # ./attribution is read from the working tree.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: ./actions/attribution
+      - uses: ./attribution

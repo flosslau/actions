@@ -89,7 +89,7 @@ How to fix it:
         git push --force-with-lease
     For older commits, `git rebase -i` and amend each one the same way.
   - The title or the description: edit the pull request. The check runs again.
-The rule and its list: https://github.com/flosslau/.github/tree/main/actions/attribution"""
+The rule and its list: https://github.com/flosslau/actions/tree/main/attribution"""
 
 
 class CannotJudge(Exception):
